@@ -1,8 +1,12 @@
 from ConfigParser import SafeConfigParser
-from StringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
 import getopt, os.path, sys, re
 
-class _Object(dict):
+class OptionObject(object):
     def __init__(self, **kwargs):
         for key, val in kwargs.iteritems():
             setattr(self, key, val)
@@ -33,7 +37,7 @@ def OptionsMeta():
     }
 
     # Variables we will return
-    options = _Object()
+    options = OptionObject()
     cmdargs = []
     _type = type
 
@@ -137,7 +141,7 @@ def OptionsMeta():
             raise OptionsError('%s is not a valid cmd_short_name. It must contain only letters or numbers and be of length 1.' % cmd_short_name)
 
         if not hasattr(options, section):
-            setattr(options, section, _Object())
+            setattr(options, section, OptionObject())
             option_definitions[section] = {}
 
         if name in option_definitions[section]:
@@ -158,7 +162,7 @@ def OptionsMeta():
         if is_help and not isinstance(type(), bool):
             raise OptionsError('Option %s.%s is defined as is_help, but with %s instead of %s.' % (section, name, type, bool))
 
-        option_definitions[section][name] = _Object(
+        option_definitions[section][name] = OptionObject(
             section=section,
             name=name,
             cmd_name=cmd_name,
@@ -301,7 +305,7 @@ def OptionsMeta():
             print e
             print
             print usage()
-            sys.exit(-1) # FIXME
+            sys.exit(os.EX_USAGE)
 
     def set_defaults():
         '''Sets the default option values if they have not already been specified.'''
@@ -350,7 +354,7 @@ options, cmdargs, define_opt, parse_config, parse_args, set_defaults, verify_all
 __ALL__ = (options, cmdargs, define_opt, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, OptionsError, OptionsUserError, OptionsMeta,)
 
 if __name__ == '__main__':
-    import unittest
+    import unittest, tempfile
 
     class Test(unittest.TestCase):
 
@@ -404,18 +408,75 @@ if __name__ == '__main__':
             self.assertEqual(self.options.foobar.flag, True)
 
         def test_parse_config(self):
-            pass
+            filename = tempfile.mkstemp()[1]
+            try:
+                cp = SafeConfigParser()
+                cp.add_section('sec')
+                cp.set('sec', 'foo', 'foo')
+                cp.set('sec', 'bar', '-1')
+                cp.set('sec', 'baz', '-0.1')
+                cp.set('sec', 'hum', 'yes')
+                cp.set('sec', 'dum', 'no')
+
+                cp.write(open(filename, 'wb'))
+
+                self.define_opt('sec', 'foo')
+                self.define_opt('sec', 'bar', type=int)
+                self.define_opt('sec', 'baz', type=float)
+                self.define_opt('sec', 'hum', type=bool)
+                self.define_opt('sec', 'dum', type=bool)
+
+                self.parse_config(filename)
+                self.verify_all_options()
+
+                self.assertEqual(self.options.sec.foo, 'foo')
+                self.assertEqual(self.options.sec.bar, -1)
+                self.assertAlmostEqual(self.options.sec.baz, -0.1)
+                self.assertEqual(self.options.sec.hum, True)
+                self.assertEqual(self.options.sec.dum, False)
+            finally:
+                os.unlink(filename)
 
         def test_defaults(self):
-            pass
+            pass # TODO
 
         def test_init_options(self):
             pass
 
         def test_generate_sample_config(self):
-            pass
+            filename = tempfile.mkstemp()[1]
+            try:
+                cp = SafeConfigParser()
+                cp.add_section('sec')
+                cp.set('sec', 'foo', 'foo')
+                cp.set('sec', 'bar', '-1')
+                cp.set('sec', 'baz', '-0.1')
+                cp.set('sec', 'hum', 'yes')
+                cp.set('sec', 'dum', 'no')
 
-        def test_usage(self):
-            pass
+                cp.write(open(filename, 'wb'))
+
+                self.define_opt('sec', 'foo', default='foo')
+                self.define_opt('sec', 'bar', type=int, default=-1)
+                self.define_opt('sec', 'baz', type=float, default=-0.1)
+                self.define_opt('sec', 'hum', type=bool, default=True)
+                self.define_opt('sec', 'dum', type=bool, default=False)
+                self.define_opt('sec', 'nop', type=unicode)
+
+                open(filename, 'wb').write(self.generate_sample_config())
+
+                self.parse_config(filename)
+
+                self.assertEqual(self.options.sec.foo, 'foo')
+                self.assertEqual(self.options.sec.bar, -1)
+                self.assertAlmostEqual(self.options.sec.baz, -0.1)
+                self.assertEqual(self.options.sec.hum, True)
+                self.assertEqual(self.options.sec.dum, False)
+
+            finally:
+                os.unlink(filename)
+
+        def test_is_config_file_is_usage(self):
+            pass # TODO
 
     unittest.main()
