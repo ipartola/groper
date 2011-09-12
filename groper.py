@@ -14,13 +14,15 @@ class OptionObject(object):
 class OptionsError(Exception): pass
 class OptionsUserError(Exception): pass
 
-def OptionsMeta():
+def OptionsMeta(print_func=None):
     '''Creates a private scope for the options manupulation functions and returns them.
 
     This function us used to create a module-wide global options object and its 
     manipulation functions. It may be used to generate local options objects, for 
     example for unit testing.
     '''
+
+    print_func = print_func or (lambda s: sys.stdout.write('%s\n' % s))
 
     option_definitions = {}
     cp = SafeConfigParser()
@@ -39,6 +41,10 @@ def OptionsMeta():
     # Variables we will return
     options = OptionObject()
     cmdargs = []
+    cmdarg_defs = {
+        'count': None,
+        'args': None,
+    }
     _type = type
 
     def generate_sample_config():
@@ -52,7 +58,7 @@ def OptionsMeta():
 
                 if not cp.has_section(section):
                     cp.add_section(section)
-                cp.set(section, name if hasattr(opt, 'default') else '#%s' % name, unicode(opt.default) if hasattr(opt, 'default') else name.upper())
+                cp.set(section, name if hasattr(opt, 'default') else '#%s' % name, unicode(opt.default) if hasattr(opt, 'default') else '<%s>' % name.upper())
 
         f = StringIO()
         cp.write(f)
@@ -83,13 +89,19 @@ def OptionsMeta():
             short_line = []
             long_line = []
 
-            group.sort(cmp=lambda a, b: -1 if (a.required and not b.required) else 1)
+            group.sort(key=lambda a: a.name) # Sort alphabetically
+            group.sort(cmp=lambda a, b: -1 if (a.required and not b.required) else 1) # Sort by required options first
             for option in group:
                 if option.cmd_short_name:
                     if option.type != bool:
                         short_line.append(wrap_optional(option, '-%s <%s>' % (option.cmd_short_name, option.cmd_name or option.name)))
                     else:
                         short_line.append(wrap_optional(option, '-%s' % option.cmd_short_name))
+                elif option.cmd_name and option.required:
+                    if option.type != bool:
+                        short_line.append(wrap_optional(option, '--%s=<%s>' % (option.cmd_name, option.cmd_name or option.name)))
+                    else:
+                        short_line.append(wrap_optional(option, '--%s' % option.cmd_name))
                
                 
                 if option.cmd_name:
@@ -97,13 +109,40 @@ def OptionsMeta():
                         long_line.append(wrap_optional(option, '--%s=<%s>' % (option.cmd_name, option.cmd_name or option.name)))
                     else:
                         long_line.append(wrap_optional(option, '--%s' % option.cmd_name))
+                elif option.cmd_short_name and option.required:
+                    if option.type != bool:
+                        long_line.append(wrap_optional(option, '-%s <%s>' % (option.cmd_short_name, option.cmd_name or option.name)))
+                    else:
+                        long_line.append(wrap_optional(option, '-%s' % option.cmd_short_name))
+
+            if cmdarg_defs['count']:
+                if cmdarg_defs['count'] == -1:
+                    arg_line = '[%s] ...' %  cmdarg_defs['args'][0]
+                elif cmdarg_defs['count'] == -2:
+                    arg_line = '<%s> [%s] ...' %  (cmdarg_defs['args'][0], cmdarg_defs['args'][0])
+                elif cmdarg_defs['args']:
+                    arg_line = ' '.join(map(lambda s: '<%s>' % s, cmdarg_defs['args']))
+                short_line.append(arg_line)
+                long_line.append(arg_line)
 
             lines.append('%s %s' % (name, ' '.join(short_line)))
             lines.append('%s %s' % (name, ' '.join(long_line)))
 
         return '\n'.join(lines)
-    
-    def define_opt(section, name, cmd_name=None, cmd_short_name=None, cmd_only=False, type=unicode, is_config_file=False, is_help=False, cmd_group='default', **kwargs):
+ 
+    def define_args(args=None):
+        if len(args) == 2 and type(args[0]) in set((int, long)) and isinstance(args[1], basestring):
+            cmdarg_defs['count'] = args[0]
+            cmdarg_defs['args'] = [args[1]] * abs(args[0])
+            return
+        elif hasattr(args, '__iter__'):
+            cmdarg_defs['count'] = len(args)
+            cmdarg_defs['args'] = tuple(args)
+            return
+
+        raise OptionsError('Define either (count, argname) (use -1 for zero or more, -2 for one or more) or a list of argument names.')
+
+    def define_opt(section, name, cmd_name=None, cmd_short_name=None, cmd_only=False, type=unicode, is_config_file=False, is_help=False, help=None, cmd_group='default', **kwargs):
         '''Defines an option. Should be run before init_options().
         
            Note that you may pass in one additional kwarg: default.
@@ -172,14 +211,14 @@ def OptionsMeta():
             is_config_file=is_config_file,
             is_help=is_help,
             cmd_group=cmd_group,
-            cmd_only=cmd_only or is_config_file,
+            cmd_only=cmd_only or is_config_file or is_help,
             set_by=None,
         )
 
-        if type == bool:
-            option_definitions[section][name].default = False
-        elif 'default' in kwargs:
+        if 'default' in kwargs:
             option_definitions[section][name].default = kwargs['default']
+        elif type == bool:
+            option_definitions[section][name].default = False
         else:
             option_definitions[section][name].required = True
             
@@ -266,7 +305,7 @@ def OptionsMeta():
             if key in cmd_options:
                 opt = cmd_options[key]
                 if opt.is_help:
-                    print usage()
+                    print_func(usage())
                     sys.exit(0)
 
                 if opt.type == bool:
@@ -280,7 +319,7 @@ def OptionsMeta():
             else:
                 raise OptionsUserError('Unknown command line parameter %s.' % key)
 
-        if config_file_def['section']:
+        if config_file_def['section'] and hasattr(getattr(options, config_file_def['section']), config_file_def['optname']):
             config_file_def['filename'] = getattr(getattr(options, config_file_def['section']), config_file_def['optname'])
 
     def init_options(argv=None, config_file=None):
@@ -302,9 +341,9 @@ def OptionsMeta():
             verify_all_options()
 
         except OptionsUserError, e:
-            print e
-            print
-            print usage()
+            print_func(e)
+            print_func('')
+            print_func(usage())
             sys.exit(os.EX_USAGE)
 
     def set_defaults():
@@ -323,6 +362,14 @@ def OptionsMeta():
 
     def verify_all_options():
         '''Raises an error if required options have not been specified.'''
+
+        if config_file_def['section'] and not config_file_def['filename']:
+            option = option_definitions[config_file_def['section']][config_file_def['optname']]
+            if option.cmd_name:
+                error = 'Required command line option --%s was not specified.' % (option.cmd_name, )
+            elif option.cmd_short_name:
+                error = 'Required command line option -%s was not specified.' % (option.cmd_short_name, )
+            raise OptionsUserError(error)
 
         errors = []
         for section in option_definitions:
@@ -344,14 +391,23 @@ def OptionsMeta():
 
                         errors.append(error)
 
+        if cmdarg_defs['count'] == -1:
+            pass # zero args required
+        elif cmdarg_defs['count'] == -2:
+            if len(cmdargs) < 1:
+                errors.append('At least one <%s> argument required.' % cmdarg_defs['args'])
+        elif cmdarg_defs['args'] is not None:
+            if len(cmdargs) != cmdarg_defs['count']:
+                errors.append('Required arguments were not specified: %s.' % ' '.join(map(lambda s: '<%s>' % s, cmdarg_defs['args'])))
+
         if len(errors) > 0:
             raise OptionsUserError('\n'.join(errors))
 
-    return options, cmdargs, define_opt, parse_config, parse_args, set_defaults, verify_all_options, init_options, generate_sample_config
+    return options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, verify_all_options, init_options, generate_sample_config, usage
 
-options, cmdargs, define_opt, parse_config, parse_args, set_defaults, verify_all_options, init_options, generate_sample_config = OptionsMeta()
+options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, verify_all_options, init_options, generate_sample_config, usage = OptionsMeta()
 
-__ALL__ = (options, cmdargs, define_opt, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, OptionsError, OptionsUserError, OptionsMeta,)
+__ALL__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
 
 if __name__ == '__main__':
     import unittest, tempfile
@@ -359,8 +415,8 @@ if __name__ == '__main__':
     class Test(unittest.TestCase):
 
         def setUp(self):
-            self.options, self.cmdargs, self.define_opt, self.parse_config, self.parse_args,\
-                self.set_defaults, self.verify_all_options, self.init_options, self.generate_sample_config = OptionsMeta()
+            self.options, self.cmdargs, self.define_opt, self.define_args, self.parse_config, self.parse_args,\
+                self.set_defaults, self.verify_all_options, self.init_options, self.generate_sample_config, self.usage = OptionsMeta(lambda s: None)
 
         def test_define_opt(self):
             self.assertRaises(OptionsError, self.define_opt, '', '')
@@ -438,24 +494,101 @@ if __name__ == '__main__':
                 os.unlink(filename)
 
         def test_defaults(self):
-            pass # TODO
+            self.define_opt('sec', 'foo', default='foo')
+            self.define_opt('sec', 'bar', type=int, default=-1)
+            self.define_opt('sec', 'baz', type=float, default=-0.1)
+            self.define_opt('sec', 'hum', type=bool, default=True)
+            self.define_opt('sec', 'dum', type=bool, default=False)
+            self.define_opt('sec', 'nop', type=unicode)
+
+            self.set_defaults()
+
+            self.assertEqual(self.options.sec.foo, 'foo')
+            self.assertEqual(self.options.sec.bar, -1)
+            self.assertAlmostEqual(self.options.sec.baz, -0.1)
+            self.assertEqual(self.options.sec.hum, True)
+            self.assertEqual(self.options.sec.dum, False)
+            self.assertTrue(not hasattr(self.options.sec, 'nop'))
 
         def test_init_options(self):
-            pass
+            filename = tempfile.mkstemp()[1]
+            try:
+
+                conf = '''
+                    [sec]
+                    foo = conf-foo
+                    nop = conf-nop
+                    
+                    [con]
+                    foo = conf-foo
+                    bar = -2
+                    baz = -0.2
+                    hum = False
+                    dum = True
+                    nop = conf-nop
+                    
+                    [cmd]
+                    foo = conf-foo
+                '''
+                
+                open(filename, 'wb').write('\n'.join(map(lambda s: s.strip(), conf.split('\n'))))
+
+                self.define_opt('sec', 'foo', default='foo')
+                self.define_opt('sec', 'bar', type=int, default=-1)
+                self.define_opt('sec', 'baz', type=float, default=-0.1)
+                self.define_opt('sec', 'hum', type=bool, default=True)
+                self.define_opt('sec', 'dum', type=bool, default=False)
+                self.define_opt('sec', 'nop', type=unicode)
+
+                self.define_opt('con', 'foo', default='foo')
+                self.define_opt('con', 'bar', type=int, default=-1)
+                self.define_opt('con', 'baz', type=float, default=-0.1)
+                self.define_opt('con', 'hum', type=bool, default=True)
+                self.define_opt('con', 'dum', type=bool, default=False)
+                self.define_opt('con', 'nop', type=unicode)
+
+                self.define_opt('cmd', 'config', cmd_name='config', cmd_short_name='c', is_config_file=True)
+                self.define_opt('cmd', 'help', type=bool, cmd_name='help', cmd_short_name='h', is_help=True, cmd_group='help')
+
+                self.define_opt('cmd', 'foo', default='foo', cmd_name='foo', cmd_short_name='f')
+                self.define_opt('cmd', 'bar', type=int, default=-1, cmd_name='bar')
+                self.define_opt('cmd', 'baz', type=float, default=-0.1, cmd_short_name='z')
+                self.define_opt('cmd', 'hum', type=bool, default=True, cmd_name='hum')
+                self.define_opt('cmd', 'dum', type=bool, default=False, cmd_short_name='d')
+                self.define_opt('cmd', 'nop', type=unicode, cmd_name='nop')
+
+                self.assertRaises(SystemExit, self.init_options, ['--help'])
+                self.assertRaises(SystemExit, self.init_options, [])
+                self.assertRaises(SystemExit, self.init_options, ['--config=%s' % filename])
+                self.init_options(['--config=%s' % filename, '--nop=cmd-nop', '--bar=-15', '-z', '-0.3', '--hum', '-d'])
+
+                self.assertEqual(self.options.sec.foo, 'conf-foo')
+                self.assertEqual(self.options.sec.bar, -1)
+                self.assertAlmostEqual(self.options.sec.baz, -0.1)
+                self.assertEqual(self.options.sec.hum, True)
+                self.assertEqual(self.options.sec.dum, False)
+                self.assertEqual(self.options.sec.nop, 'conf-nop')
+
+                self.assertEqual(self.options.con.foo, 'conf-foo')
+                self.assertEqual(self.options.con.bar, -2)
+                self.assertAlmostEqual(self.options.con.baz, -0.2)
+                self.assertEqual(self.options.con.hum, False)
+                self.assertEqual(self.options.con.dum, True)
+                self.assertEqual(self.options.con.nop, 'conf-nop')
+
+                self.assertEqual(self.options.cmd.foo, 'conf-foo')
+                self.assertEqual(self.options.cmd.bar, -15)
+                self.assertAlmostEqual(self.options.cmd.baz, -0.3)
+                self.assertEqual(self.options.cmd.hum, True)
+                self.assertEqual(self.options.cmd.dum, True)
+                self.assertEqual(self.options.cmd.nop, 'cmd-nop')
+
+            finally:
+                os.unlink(filename)
 
         def test_generate_sample_config(self):
             filename = tempfile.mkstemp()[1]
             try:
-                cp = SafeConfigParser()
-                cp.add_section('sec')
-                cp.set('sec', 'foo', 'foo')
-                cp.set('sec', 'bar', '-1')
-                cp.set('sec', 'baz', '-0.1')
-                cp.set('sec', 'hum', 'yes')
-                cp.set('sec', 'dum', 'no')
-
-                cp.write(open(filename, 'wb'))
-
                 self.define_opt('sec', 'foo', default='foo')
                 self.define_opt('sec', 'bar', type=int, default=-1)
                 self.define_opt('sec', 'baz', type=float, default=-0.1)
@@ -472,11 +605,29 @@ if __name__ == '__main__':
                 self.assertAlmostEqual(self.options.sec.baz, -0.1)
                 self.assertEqual(self.options.sec.hum, True)
                 self.assertEqual(self.options.sec.dum, False)
+                self.assertTrue(not hasattr(self.options.sec, 'nop'))
 
             finally:
                 os.unlink(filename)
 
-        def test_is_config_file_is_usage(self):
-            pass # TODO
+        def test_args(self):
+            self.define_opt('sec', 'foo', default='foo', cmd_name='foo')
+            self.define_opt('sec', 'bar', type=int, default=-1, cmd_short_name='b')
+
+            self.define_args((-2, 'file'))
+            self.parse_args(['--foo=cmdfoo', '-b', '-2'])
+            self.assertRaises(OptionsUserError, self.verify_all_options)
+            
+            self.define_args(('file1', 'file2', 'file3'))
+            self.parse_args(['--foo=cmdfoo', '-b', '-2'])
+            self.assertRaises(OptionsUserError, self.verify_all_options)
+            
+            self.define_args(('file1', 'file2', 'file3'))
+            self.parse_args(['--foo=cmdfoo', '-b', '-2', 'a', 'b', 'c'])
+            self.verify_all_options()
+                
+            self.assertEqual(self.options.sec.foo, 'cmdfoo')
+            self.assertEqual(self.options.sec.bar, -2)
+            self.assertEqual(self.cmdargs, ['a', 'b', 'c'])
 
     unittest.main()
