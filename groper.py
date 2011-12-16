@@ -48,7 +48,7 @@ def OptionsMeta(print_func=None):
     _type = type
 
     def generate_sample_config():
-        '''Returns a sample configuration file based on the defined options.'''
+        '''Returns a string containing a sample configuration file based on the defined options.'''
 
         cp = SafeConfigParser()
         for section in option_definitions:
@@ -66,11 +66,11 @@ def OptionsMeta(print_func=None):
         f.close()
         return result
 
-    def usage(name=None):
-        '''Returns usage/help based on defined options.'''
+    def usage(cmd_name=None):
+        '''Returns usage/help string based on defined options.'''
 
-        if name is None:
-            name = sys.argv[0]
+        if cmd_name is None:
+            cmd_name = sys.argv[0]
 
         lines = []
         lines.append('Usage:')
@@ -125,12 +125,21 @@ def OptionsMeta(print_func=None):
                 short_line.append(arg_line)
                 long_line.append(arg_line)
 
-            lines.append('%s %s' % (name, ' '.join(short_line)))
-            lines.append('%s %s' % (name, ' '.join(long_line)))
+            lines.append('%s %s' % (cmd_name, ' '.join(short_line)))
+            lines.append('%s %s' % (cmd_name, ' '.join(long_line)))
 
         return '\n'.join(lines)
  
     def define_args(args=None):
+        '''Defines required/optional arguments.
+
+        The args parameter can be in the following forms:
+          - (num, name): num is the number of arguments expected, and name is the name
+            to be printed when program usage is being shown.
+            NOTE: num can be -1 for "0 or more agruments" and -2 for "one or more arguments"
+          - (arg1, arg2, arg3): Require three arguments, each with a different name.
+        '''
+
         if len(args) == 2 and type(args[0]) in set((int, long)) and isinstance(args[1], basestring):
             cmdarg_defs['count'] = args[0]
             cmdarg_defs['args'] = [args[1]] * abs(args[0])
@@ -228,8 +237,9 @@ def OptionsMeta(print_func=None):
             config_file_def['optname'] = name
 
     def parse_config(config_file=None):
-        '''Parses a configuration file and sets option values if not already
-        set by the parse_args() function.'''
+        '''Parses a configuration file.
+        
+        This function sets option values if not already set by the parse_args() function.'''
 
         if not config_file:
             if not config_file_def['filename']:
@@ -325,8 +335,8 @@ def OptionsMeta(print_func=None):
     def init_options(argv=None, config_file=None):
         """Shortcut method for initializing all the options.
 
-        It uses sys.argv[1] by default and no configuration file unless a command
-        line option has been defined as is_config_file=True.
+        Uses no configuration file unless a command line option has been defined 
+        as is_config_file=True.
         """
         
         if argv is None:
@@ -361,7 +371,7 @@ def OptionsMeta(print_func=None):
                 setattr(getattr(options, section), name, default)
 
     def verify_all_options():
-        '''Raises an error if required options have not been specified.'''
+        '''Raises an error if required options have not been specified by the user.'''
 
         if config_file_def['section'] and not config_file_def['filename']:
             option = option_definitions[config_file_def['section']][config_file_def['optname']]
@@ -407,7 +417,7 @@ def OptionsMeta(print_func=None):
 
 options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, verify_all_options, init_options, generate_sample_config, usage = OptionsMeta()
 
-__ALL__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
+__all__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
 
 if __name__ == '__main__':
     import unittest, tempfile
