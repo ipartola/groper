@@ -63,5 +63,5 @@ Hopefully you will find groper useful. It can be installed via PyPi:
 
     $ pip install groper
 
-groper is licensed under the BSD license and is Copyright (c) 2011 Ridgebit LLC.
+groper is licensed under the MIT license and is Copyright (c) 2011 Igor Partola
 

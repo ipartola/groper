@@ -419,6 +419,8 @@ options, cmdargs, define_opt, define_args, parse_config, parse_args, set_default
 
 __all__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
 
+__version__ = '0.1.0'
+
 if __name__ == '__main__':
     import unittest, tempfile
 
