@@ -273,6 +273,8 @@ def OptionsMeta(print_func=None):
                         except ValueError:
                             raise OptionsUserError('Could not parse configuration file %s: section %s option %s must be of type %s' % (config_file, section, name, opt.type.__name__))
                         except NoOptionError:
+                            if option_definitions[section][name].set_by or hasattr(option_definitions[section][name], 'default'):
+                                continue
                             raise OptionsUserError('Could not parse configuration file %s: section %s option %s was not found' % (config_file, section, name))
                         option_definitions[section][name].set_by = parse_config
 
@@ -422,7 +424,7 @@ options, cmdargs, define_opt, define_args, parse_config, parse_args, set_default
 
 __all__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 if __name__ == '__main__':
     import unittest, tempfile
