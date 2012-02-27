@@ -1,4 +1,4 @@
-from ConfigParser import SafeConfigParser
+from ConfigParser import SafeConfigParser, NoOptionError
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -254,7 +254,7 @@ def OptionsMeta(print_func=None):
 
         for section in option_definitions:
             if cp.has_section(section):
-                for name, value in cp.items(section):
+                for name in option_definitions[section]:
                     if option_definitions[section][name].set_by is not None:
                         continue
 
@@ -268,9 +268,12 @@ def OptionsMeta(print_func=None):
                             if opt.type in adapters:
                                 setattr(getattr(options, section), name, adapters[opt.type](section, name))
                             else:
+                                value = cp.get(section, name)
                                 setattr(getattr(options, section), name, opt.type(value))
                         except ValueError:
                             raise OptionsUserError('Could not parse configuration file %s: section %s option %s must be of type %s' % (config_file, section, name, opt.type.__name__))
+                        except NoOptionError:
+                            raise OptionsUserError('Could not parse configuration file %s: section %s option %s was not found' % (config_file, section, name))
                         option_definitions[section][name].set_by = parse_config
 
     def parse_args(argv):
