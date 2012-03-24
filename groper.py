@@ -611,7 +611,6 @@ if __name__ == '__main__':
                 self.define_opt('sec', 'baz', type=float, default=-0.1)
                 self.define_opt('sec', 'hum', type=bool, default=True)
                 self.define_opt('sec', 'dum', type=bool, default=False)
-                self.define_opt('sec', 'nop', type=unicode)
 
                 open(filename, 'wb').write(self.generate_sample_config())
 
@@ -622,7 +621,6 @@ if __name__ == '__main__':
                 self.assertAlmostEqual(self.options.sec.baz, -0.1)
                 self.assertEqual(self.options.sec.hum, True)
                 self.assertEqual(self.options.sec.dum, False)
-                self.assertTrue(not hasattr(self.options.sec, 'nop'))
 
             finally:
                 os.unlink(filename)
