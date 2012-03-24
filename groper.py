@@ -70,7 +70,7 @@ def OptionsMeta(print_func=None):
         '''Returns usage/help string based on defined options.'''
 
         if cmd_name is None:
-            cmd_name = sys.argv[0]
+            cmd_name = os.path.basename(sys.argv[0])
 
         lines = []
         lines.append('Usage:')
@@ -424,7 +424,7 @@ options, cmdargs, define_opt, define_args, parse_config, parse_args, set_default
 
 __all__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 if __name__ == '__main__':
     import unittest, tempfile
