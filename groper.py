@@ -49,7 +49,7 @@ def OptionsMeta(print_func=None):
 
     def generate_sample_config():
         '''Returns a string containing a sample configuration file based on the defined options.'''
-
+        
         cp = SafeConfigParser()
         for section in option_definitions:
             for name, opt in option_definitions[section].iteritems():
@@ -66,16 +66,56 @@ def OptionsMeta(print_func=None):
         f.close()
         return result
 
+    def _option_usage(option):
+        '''Create an option usage line part based on option definition.
+        
+            Returns a tuple of (short_str, long_str) to be added.
+        '''
+        s, l = None, None
+
+        wrap_optional = lambda option, s: s if option.required else ('[%s]' % s) 
+
+        if option.cmd_short_name:
+            if option.type != bool:
+                s = wrap_optional(option, '-%s <%s>' % (option.cmd_short_name, option.cmd_name or option.name))
+            else:
+                s = wrap_optional(option, '-%s' % option.cmd_short_name)
+        elif option.cmd_name and option.required:
+            if option.type != bool:
+                s = wrap_optional(option, '--%s=<%s>' % (option.cmd_name, option.cmd_name or option.name))
+            else:
+                s = wrap_optional(option, '--%s' % option.cmd_name)
+       
+        
+        if option.cmd_name:
+            if option.type != bool:
+                l = wrap_optional(option, '--%s=<%s>' % (option.cmd_name, option.cmd_name or option.name))
+            else:
+                l = wrap_optional(option, '--%s' % option.cmd_name)
+        elif option.cmd_short_name and option.required:
+            if option.type != bool:
+                l = wrap_optional(option, '-%s <%s>' % (option.cmd_short_name, option.cmd_name or option.name))
+            else:
+                l = wrap_optional(option, '-%s' % option.cmd_short_name)
+
+        return s, l
+
+    def _args_usage(cmdargs_def):
+        if cmdarg_defs['count'] == -1:
+            return '[%s] ...' %  cmdarg_defs['args'][0]
+        elif cmdarg_defs['count'] == -2:
+            return '<%s> [%s] ...' %  (cmdarg_defs['args'][0], cmdarg_defs['args'][0])
+        elif cmdarg_defs['args']:
+            return ' '.join(map(lambda s: '<%s>' % s, cmdarg_defs['args']))
+
     def usage(cmd_name=None):
         '''Returns usage/help string based on defined options.'''
 
-        if cmd_name is None:
-            cmd_name = os.path.basename(sys.argv[0])
+        cmd_name = cmd_name or os.path.basename(sys.argv[0])
+        
+        lines = ['Usage:', '',]
 
-        lines = []
-        lines.append('Usage:')
-        lines.append('')
-
+        # Group all options
         cmd_options = {}
         for section in option_definitions:
             for name, opt in option_definitions[section].iteritems():
@@ -84,7 +124,11 @@ def OptionsMeta(print_func=None):
                         cmd_options[opt.cmd_group] = []
                     cmd_options[opt.cmd_group].append(opt)
 
-        wrap_optional = lambda option, s: s if option.required else ('[%s]' % s) 
+        if not cmd_options and cmdarg_defs['count']:
+            arg_line = _args_usage(cmdarg_defs)
+            lines.append('%s %s' % (cmd_name, arg_line))
+
+        # Create lines
         for group in cmd_options.values():
             short_line = []
             long_line = []
@@ -92,41 +136,17 @@ def OptionsMeta(print_func=None):
             group.sort(key=lambda a: a.name) # Sort alphabetically
             group.sort(cmp=lambda a, b: -1 if (a.required and not b.required) else 1) # Sort by required options first
             for option in group:
-                if option.cmd_short_name:
-                    if option.type != bool:
-                        short_line.append(wrap_optional(option, '-%s <%s>' % (option.cmd_short_name, option.cmd_name or option.name)))
-                    else:
-                        short_line.append(wrap_optional(option, '-%s' % option.cmd_short_name))
-                elif option.cmd_name and option.required:
-                    if option.type != bool:
-                        short_line.append(wrap_optional(option, '--%s=<%s>' % (option.cmd_name, option.cmd_name or option.name)))
-                    else:
-                        short_line.append(wrap_optional(option, '--%s' % option.cmd_name))
-               
-                
-                if option.cmd_name:
-                    if option.type != bool:
-                        long_line.append(wrap_optional(option, '--%s=<%s>' % (option.cmd_name, option.cmd_name or option.name)))
-                    else:
-                        long_line.append(wrap_optional(option, '--%s' % option.cmd_name))
-                elif option.cmd_short_name and option.required:
-                    if option.type != bool:
-                        long_line.append(wrap_optional(option, '-%s <%s>' % (option.cmd_short_name, option.cmd_name or option.name)))
-                    else:
-                        long_line.append(wrap_optional(option, '-%s' % option.cmd_short_name))
+                s, l = _option_usage(option)
+                if s:
+                    short_line.append(s)
+                if l:
+                    long_line.append(l)
 
-            if cmdarg_defs['count']:
-                if cmdarg_defs['count'] == -1:
-                    arg_line = '[%s] ...' %  cmdarg_defs['args'][0]
-                elif cmdarg_defs['count'] == -2:
-                    arg_line = '<%s> [%s] ...' %  (cmdarg_defs['args'][0], cmdarg_defs['args'][0])
-                elif cmdarg_defs['args']:
-                    arg_line = ' '.join(map(lambda s: '<%s>' % s, cmdarg_defs['args']))
-                short_line.append(arg_line)
-                long_line.append(arg_line)
+            arg_line = _args_usage(cmdarg_defs)
 
-            lines.append('%s %s' % (cmd_name, ' '.join(short_line)))
-            lines.append('%s %s' % (cmd_name, ' '.join(long_line)))
+            if arg_line:
+                lines.append('%s %s' % (cmd_name, ' '.join(short_line)))
+                lines.append('%s %s' % (cmd_name, ' '.join(long_line)))
 
         return '\n'.join(lines)
  
@@ -424,7 +444,7 @@ options, cmdargs, define_opt, define_args, parse_config, parse_args, set_default
 
 __all__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 if __name__ == '__main__':
     import unittest, tempfile
