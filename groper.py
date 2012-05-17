@@ -145,8 +145,11 @@ def OptionsMeta(print_func=None):
             arg_line = _args_usage(cmdarg_defs)
 
             if arg_line:
-                lines.append('%s %s' % (cmd_name, ' '.join(short_line)))
-                lines.append('%s %s' % (cmd_name, ' '.join(long_line)))
+                short_line.append(arg_line)
+                long_line.append(arg_line)
+
+            lines.append('%s %s' % (cmd_name, ' '.join(short_line)))
+            lines.append('%s %s' % (cmd_name, ' '.join(long_line)))
 
         return '\n'.join(lines)
  
@@ -444,7 +447,7 @@ options, cmdargs, define_opt, define_args, parse_config, parse_args, set_default
 
 __all__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 
 if __name__ == '__main__':
     import unittest, tempfile
