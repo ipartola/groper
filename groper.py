@@ -447,7 +447,7 @@ def OptionsMeta(print_func=None):
 
 options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, verify_all_options, init_options, generate_sample_config, usage = OptionsMeta()
 
-__all__ = (options, cmdargs, define_opt, define_args, parse_config, parse_args, set_defaults, init_options, verify_all_options, generate_sample_config, usage, OptionsError, OptionsUserError, OptionsMeta,)
+__all__ = ('options', 'cmdargs', 'define_opt', 'define_args', 'parse_config', 'parse_args', 'set_defaults', 'init_options', 'verify_all_options', 'generate_sample_config', 'usage', 'OptionsError', 'OptionsUserError', 'OptionsMeta',)
 
 __version__ = '0.1.6'
 
