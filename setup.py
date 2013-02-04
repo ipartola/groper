@@ -13,6 +13,7 @@ setup(
     url = 'https://github.com/ipartola/groper',
     py_modules = ['groper'],
     license = 'MIT',
+    test_suite = 'tests.tests_all',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
@@ -21,6 +22,7 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: POSIX',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 3',
         'Topic :: Software Development :: Libraries',
     ],
 )
