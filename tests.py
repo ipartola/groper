@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from __future__ import unicode_literals, print_function
 
 import unittest, tempfile, os
 from groper import OptionsMeta, OptionsUserError, OptionsError
@@ -91,7 +94,7 @@ class GroperTest(unittest.TestCase):
             os.unlink(filename)
 
     def test_defaults(self):
-        self.define_opt('sec', 'foo', default='foo')
+        self.define_opt('sec', 'foo', default='fõõ')
         self.define_opt('sec', 'bar', type=int, default=-1)
         self.define_opt('sec', 'baz', type=float, default=-0.1)
         self.define_opt('sec', 'hum', type=bool, default=True)
@@ -100,7 +103,7 @@ class GroperTest(unittest.TestCase):
 
         self.set_defaults()
 
-        self.assertEqual(self.options.sec.foo, 'foo')
+        self.assertEqual(self.options.sec.foo, 'fõõ')
         self.assertEqual(self.options.sec.bar, -1)
         self.assertAlmostEqual(self.options.sec.baz, -0.1)
         self.assertEqual(self.options.sec.hum, True)
@@ -108,36 +111,39 @@ class GroperTest(unittest.TestCase):
         self.assertTrue(not hasattr(self.options.sec, 'nop'))
 
     def test_init_options(self):
-        filename = tempfile.mkstemp()[1]
+        fd, filename = tempfile.mkstemp()
         try:
 
             conf = '''
                 [sec]
-                foo = conf-foo
-                nop = conf-nop
+                foo = cõnf-fõõ
+                nop = cõnf-nõp
                 
                 [con]
-                foo = conf-foo
+                foo = cõnf-fõõ
                 bar = -2
                 baz = -0.2
                 hum = False
                 dum = True
-                nop = conf-nop
+                nop = cõnf-nõp
                 
                 [cmd]
-                foo = conf-foo
+                foo = cõnf-fõõ
             '''
-            with open(filename, 'w') as fp:
-                fp.write('\n'.join([s.strip() for s in conf.split('\n')]))
 
-            self.define_opt('sec', 'foo', default='foo')
+            fp = os.fdopen(fd, 'wb')
+            data = '\n'.join([s.strip() for s in conf.split('\n')])
+            fp.write(data.encode('utf-8'))
+            fp.close()
+
+            self.define_opt('sec', 'foo', default='fõõ')
             self.define_opt('sec', 'bar', type=int, default=-1)
             self.define_opt('sec', 'baz', type=float, default=-0.1)
             self.define_opt('sec', 'hum', type=bool, default=True)
             self.define_opt('sec', 'dum', type=bool, default=False)
             self.define_opt('sec', 'nop')
 
-            self.define_opt('con', 'foo', default='foo')
+            self.define_opt('con', 'foo', default='fõõ')
             self.define_opt('con', 'bar', type=int, default=-1)
             self.define_opt('con', 'baz', type=float, default=-0.1)
             self.define_opt('con', 'hum', type=bool, default=True)
@@ -147,7 +153,7 @@ class GroperTest(unittest.TestCase):
             self.define_opt('cmd', 'config', cmd_name='config', cmd_short_name='c', is_config_file=True)
             self.define_opt('cmd', 'help', type=bool, cmd_name='help', cmd_short_name='h', is_help=True, cmd_group='help')
 
-            self.define_opt('cmd', 'foo', default='foo', cmd_name='foo', cmd_short_name='f')
+            self.define_opt('cmd', 'foo', default='fõõ', cmd_name='foo', cmd_short_name='f')
             self.define_opt('cmd', 'bar', type=int, default=-1, cmd_name='bar')
             self.define_opt('cmd', 'baz', type=float, default=-0.1, cmd_short_name='z')
             self.define_opt('cmd', 'hum', type=bool, default=True, cmd_name='hum')
@@ -156,24 +162,24 @@ class GroperTest(unittest.TestCase):
 
             self.assertRaises(SystemExit, self.init_options, ['--help'])
             self.assertRaises(SystemExit, self.init_options, [])
-            self.assertRaises(SystemExit, self.init_options, ['--config=%s' % filename])
-            self.init_options(['--config=%s' % filename, '--nop=cmd-nop', '--bar=-15', '-z', '-0.3', '--hum', '-d'])
+            self.assertRaises(SystemExit, self.init_options, ['--config={0}'.format(filename)])
+            self.init_options(['--config={0}'.format(filename), '--nop=cmd-nop', '--bar=-15', '-z', '-0.3', '--hum', '-d'])
 
-            self.assertEqual(self.options.sec.foo, 'conf-foo')
+            self.assertEqual(self.options.sec.foo, 'cõnf-fõõ')
             self.assertEqual(self.options.sec.bar, -1)
             self.assertAlmostEqual(self.options.sec.baz, -0.1)
             self.assertEqual(self.options.sec.hum, True)
             self.assertEqual(self.options.sec.dum, False)
-            self.assertEqual(self.options.sec.nop, 'conf-nop')
+            self.assertEqual(self.options.sec.nop, 'cõnf-nõp')
 
-            self.assertEqual(self.options.con.foo, 'conf-foo')
+            self.assertEqual(self.options.con.foo, 'cõnf-fõõ')
             self.assertEqual(self.options.con.bar, -2)
             self.assertAlmostEqual(self.options.con.baz, -0.2)
             self.assertEqual(self.options.con.hum, False)
             self.assertEqual(self.options.con.dum, True)
-            self.assertEqual(self.options.con.nop, 'conf-nop')
+            self.assertEqual(self.options.con.nop, 'cõnf-nõp')
 
-            self.assertEqual(self.options.cmd.foo, 'conf-foo')
+            self.assertEqual(self.options.cmd.foo, 'cõnf-fõõ')
             self.assertEqual(self.options.cmd.bar, -15)
             self.assertAlmostEqual(self.options.cmd.baz, -0.3)
             self.assertEqual(self.options.cmd.hum, True)

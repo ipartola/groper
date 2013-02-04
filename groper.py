@@ -1,5 +1,5 @@
 
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 
 try:
     from configparser import RawConfigParser, NoOptionError
@@ -8,7 +8,7 @@ except ImportError:
 
 from io import StringIO
 
-import getopt, os.path, sys, re
+import getopt, os.path, sys, re, codecs
 
 class OptionObject(object):
     def __init__(self, **kwargs):
@@ -294,7 +294,7 @@ def OptionsMeta(print_func=None):
         if not os.path.exists(config_file):
             raise OptionsError('Configuration file {0} does not exist.'.format(config_file))
 
-        cp.read(config_file)
+        cp.readfp(codecs.open(config_file, 'r', 'utf-8'))
 
         for section in option_definitions:
             if cp.has_section(section):
@@ -314,8 +314,9 @@ def OptionsMeta(print_func=None):
                             else:
                                 value = cp.get(section, name)
                                 setattr(getattr(options, section), name, opt.type(value))
-                        except ValueError:
-                            raise OptionsUserError('Could not parse configuration file {0}: section {1} option {2} must be of type {3}'.format(config_file, section, name, opt.type.__name__))
+                        except ValueError as e:
+                            print(e)
+                            raise OptionsUserError('Could not parse configuration file {0}: section {1} option {2} must be of type {3}, not {4}'.format(config_file, section, name, opt.type.__name__, type(getattr(getattr(options, section), name))))
                         except NoOptionError:
                             if option_definitions[section][name].set_by or hasattr(option_definitions[section][name], 'default'):
                                 continue
