@@ -128,7 +128,7 @@ class GroperTest(unittest.TestCase):
                 foo = conf-foo
             '''
             with open(filename, 'w') as fp:
-                fp.write('\n'.join(map(lambda s: s.strip(), conf.split('\n'))))
+                fp.write('\n'.join([s.strip() for s in conf.split('\n')]))
 
             self.define_opt('sec', 'foo', default='foo')
             self.define_opt('sec', 'bar', type=int, default=-1)

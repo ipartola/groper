@@ -124,7 +124,7 @@ def OptionsMeta(print_func=None):
         elif cmdarg_defs['count'] == -2:
             return '<{0}> [{1}] ...'.format(cmdarg_defs['args'][0], cmdarg_defs['args'][0])
         elif cmdarg_defs['args']:
-            return ' '.join(map(lambda s: '<{0}>'.format(s), cmdarg_defs['args']))
+            return ' '.join(['<{0}>'.format(s) for s in cmdarg_defs['args']])
 
     def usage(cmd_name=None):
         '''Returns usage/help string based on defined options.'''
@@ -153,7 +153,7 @@ def OptionsMeta(print_func=None):
 
             group.sort(key=lambda a: a.name) # Sort alphabetically
             group.sort(key=lambda a: int(a.required)) # Sort by required options first
-            #group.sort(cmp=lambda a, b: -1 if (a.required and not b.required) else 1) # Sort by required options first
+            
             for option in group:
                 s, l = _option_usage(option)
                 if s:
@@ -355,7 +355,7 @@ def OptionsMeta(print_func=None):
 
         # Empty a non-local scope list, in case parse_args is called twice
         if len(cmdargs) > 0:
-            [cmdargs.pop() for _ in xrange(len(cmdargs))]
+            [cmdargs.pop() for _ in range(len(cmdargs))]
         
         for arg in args:
             cmdargs.append(arg)
@@ -457,7 +457,7 @@ def OptionsMeta(print_func=None):
                 errors.append('At least one <{0}> argument required.'.format(cmdarg_defs['args']))
         elif cmdarg_defs['args'] is not None:
             if len(cmdargs) != cmdarg_defs['count']:
-                errors.append('Required arguments were not specified: {0}.'.format(' '.join(map(lambda s: '<{0}>'.format(s), cmdarg_defs['args']))))
+                errors.append('Required arguments were not specified: {0}.'.format(' '.join(['<{0}>'.format(s) for s in cmdarg_defs['args']])))
 
         if len(errors) > 0:
             raise OptionsUserError('\n'.join(errors))
