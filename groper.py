@@ -169,7 +169,7 @@ def OptionsMeta(print_func=None):
 
             if short_line:
                 lines.append('{0} {1}'.format(cmd_name, ' '.join(short_line)))
-            if short_line:
+            if long_line:
                 lines.append('{0} {1}'.format(cmd_name, ' '.join(long_line)))
 
         return '\n'.join(lines)
