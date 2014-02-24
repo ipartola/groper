@@ -26,7 +26,7 @@ def OptionsMeta(print_func=None):
     example for unit testing.
     '''
 
-    print_func = print_func or (lambda s: sys.stdout.write('{0}\n'.format(s) and sys.stdout.flush()))
+    print_func = print_func or print # Pass in a custom print function to use, e.g. stderr
 
     option_definitions = {}
     cp = RawConfigParser()
@@ -279,6 +279,9 @@ def OptionsMeta(print_func=None):
         if is_config_file:
             config_file_def['section'] = section
             config_file_def['optname'] = name
+            
+            if 'default' in kwargs:
+                config_file_def['filename'] = kwargs['default']
 
     def parse_config(config_file=None):
         '''Parses a configuration file.
@@ -287,12 +290,12 @@ def OptionsMeta(print_func=None):
 
         if not config_file:
             if not config_file_def['filename']:
-                raise OptionsError('parse_config() needs to have an config file specified or have a command line defined as is_config_file=True')
+                raise OptionsError('You must pass a config_file path to parse_config() or define a command line option is_config_file=True with an optional default.')
             config_file = config_file_def['filename']
 
         config_file = os.path.abspath(config_file)
         if not os.path.exists(config_file):
-            raise OptionsError('Configuration file {0} does not exist.'.format(config_file))
+            raise OptionsUserError('Configuration file {0} does not exist.'.format(config_file))
 
         cp.readfp(codecs.open(config_file, 'r', 'utf-8'))
 
@@ -425,6 +428,7 @@ def OptionsMeta(print_func=None):
 
         if config_file_def['section'] and not config_file_def['filename']:
             option = option_definitions[config_file_def['section']][config_file_def['optname']]
+
             if option.cmd_name:
                 error = 'Required command line option --{0} was not specified.'.format(option.cmd_name)
             elif option.cmd_short_name:
@@ -469,5 +473,5 @@ options, cmdargs, define_opt, define_args, parse_config, parse_args, set_default
 
 __all__ = ('options', 'cmdargs', 'define_opt', 'define_args', 'parse_config', 'parse_args', 'set_defaults', 'init_options', 'verify_all_options', 'generate_sample_config', 'usage', 'OptionsError', 'OptionsUserError', 'OptionsMeta',)
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
 

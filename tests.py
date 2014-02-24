@@ -189,6 +189,30 @@ class GroperTest(unittest.TestCase):
         finally:
             os.unlink(filename)
     
+    def test_init_options_with_default_config_file(self):
+        fd, filename = tempfile.mkstemp()
+        try:
+
+            conf = '''
+                [sec]
+                foo = cõnf-fõõ
+            '''
+
+            fp = os.fdopen(fd, 'wb')
+            data = '\n'.join([s.strip() for s in conf.split('\n')])
+            fp.write(data.encode('utf-8'))
+            fp.close()
+
+            self.define_opt('sec', 'foo', default='fõõ')
+            self.define_opt('cmd', 'config', cmd_name='config', cmd_short_name='c', is_config_file=True, default=filename)
+            self.define_opt('cmd', 'help', type=bool, cmd_name='help', cmd_short_name='h', is_help=True, cmd_group='help')
+
+            self.init_options()
+
+            self.assertEqual(self.options.sec.foo, 'cõnf-fõõ')
+        finally:
+            os.unlink(filename)
+    
     def test_generate_sample_config(self):
         filename = tempfile.mkstemp()[1]
         try:
