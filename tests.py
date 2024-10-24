@@ -1,14 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-from __future__ import unicode_literals, print_function
-
 import unittest, tempfile, os
 from groper import OptionsMeta, OptionsUserError, OptionsError
-try:
-    from configparser import RawConfigParser, NoOptionError
-except ImportError:
-    from ConfigParser import RawConfigParser, NoOptionError
+from configparser import RawConfigParser, NoOptionError
 
 class GroperTest(unittest.TestCase):
 
@@ -21,13 +13,13 @@ class GroperTest(unittest.TestCase):
         self.assertRaises(OptionsError, self.define_opt, '#foobar', 'hello')
         self.assertRaises(OptionsError, self.define_opt, '-foobar', '')
         self.assertRaises(OptionsError, self.define_opt, 'foobar', '~soo')
-        
+
         self.assertRaises(OptionsError, self.define_opt, 'foobar', 'bazbaz', cmd_name=1)
         self.assertRaises(OptionsError, self.define_opt, 'foobar', 'bazbaz', cmd_short_name=1)
 
         self.assertEqual(self.define_opt('foobar', 'soo'), None)
         self.assertRaises(OptionsError, self.define_opt, 'foobar', 'soo') # Double define
-        
+
         self.assertRaises(OptionsError, self.define_opt, 'foobar', 'config', is_config_file=True)
         self.assertEqual(self.define_opt('foobar', 'config', is_config_file=True, cmd_name='config', cmd_short_name='c'), None)
 
@@ -44,7 +36,7 @@ class GroperTest(unittest.TestCase):
         self.assertEqual(self.options.foobar.num, -1)
         self.assertAlmostEqual(self.options.foobar.dec, -2.0)
         self.assertEqual(self.options.foobar.flag, False)
-        
+
         self.parse_args(['--config=/tmp/noname.conf', '--num=0', '--dec=0.0', '--flag'])
         self.set_defaults()
 
@@ -52,7 +44,7 @@ class GroperTest(unittest.TestCase):
         self.assertEqual(self.options.foobar.num, 0)
         self.assertAlmostEqual(self.options.foobar.dec, 0.0)
         self.assertEqual(self.options.foobar.flag, True)
-        
+
         self.parse_args(['-c', '/tmp/noname.conf', '-n', '0', '-', '0.0', '-f'])
         self.set_defaults()
 
@@ -118,7 +110,7 @@ class GroperTest(unittest.TestCase):
                 [sec]
                 foo = cõnf-fõõ
                 nop = cõnf-nõp
-                
+
                 [con]
                 foo = cõnf-fõõ
                 bar = -2
@@ -126,7 +118,7 @@ class GroperTest(unittest.TestCase):
                 hum = False
                 dum = True
                 nop = cõnf-nõp
-                
+
                 [cmd]
                 foo = cõnf-fõõ
             '''
@@ -188,7 +180,7 @@ class GroperTest(unittest.TestCase):
 
         finally:
             os.unlink(filename)
-    
+
     def test_init_options_with_default_config_file(self):
         fd, filename = tempfile.mkstemp()
         try:
@@ -212,7 +204,7 @@ class GroperTest(unittest.TestCase):
             self.assertEqual(self.options.sec.foo, 'cõnf-fõõ')
         finally:
             os.unlink(filename)
-    
+
     def test_generate_sample_config(self):
         filename = tempfile.mkstemp()[1]
         try:
@@ -235,7 +227,7 @@ class GroperTest(unittest.TestCase):
 
         finally:
             os.unlink(filename)
-    
+
     def test_args(self):
         self.define_opt('sec', 'foo', default='foo', cmd_name='foo')
         self.define_opt('sec', 'bar', type=int, default=-1, cmd_short_name='b')
@@ -243,20 +235,22 @@ class GroperTest(unittest.TestCase):
         self.define_args((-2, 'file'))
         self.parse_args(['--foo=cmdfoo', '-b', '-2'])
         self.assertRaises(OptionsUserError, self.verify_all_options)
-        
+
         self.define_args(('file1', 'file2', 'file3'))
         self.parse_args(['--foo=cmdfoo', '-b', '-2'])
         self.assertRaises(OptionsUserError, self.verify_all_options)
-        
+
         self.define_args(('file1', 'file2', 'file3'))
         self.parse_args(['--foo=cmdfoo', '-b', '-2', 'a', 'b', 'c'])
         self.verify_all_options()
-            
+
         self.assertEqual(self.options.sec.foo, 'cmdfoo')
         self.assertEqual(self.options.sec.bar, -2)
         self.assertEqual(self.cmdargs, ['a', 'b', 'c'])
 
+
 tests_all = unittest.TestLoader().loadTestsFromTestCase(GroperTest)
+
 
 if __name__ == '__main__':
     unittest.TextTestRunner(verbosity=2).run(tests_all)

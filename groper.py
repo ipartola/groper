@@ -1,11 +1,5 @@
 
-from __future__ import unicode_literals, print_function
-
-try:
-    from configparser import RawConfigParser, NoOptionError
-except ImportError:
-    from ConfigParser import RawConfigParser, NoOptionError
-
+from configparser import RawConfigParser, NoOptionError
 from io import StringIO
 
 import getopt, os.path, sys, re, codecs
@@ -21,8 +15,8 @@ class OptionsUserError(Exception): pass
 def OptionsMeta(print_func=None):
     '''Creates a private scope for the options manupulation functions and returns them.
 
-    This function us used to create a module-wide global options object and its 
-    manipulation functions. It may be used to generate local options objects, for 
+    This function us used to create a module-wide global options object and its
+    manipulation functions. It may be used to generate local options objects, for
     example for unit testing.
     '''
 
@@ -51,19 +45,10 @@ def OptionsMeta(print_func=None):
     }
     _type = type
 
-    try:
-        _basestring = basestring
-    except NameError:
-        _basestring = str
-
-    try:
-        _long = long
-    except NameError:
-        _long = int
 
     def generate_sample_config():
         '''Returns a string containing a sample configuration file based on the defined options.'''
-        
+
         f = StringIO()
         try:
             for section in option_definitions:
@@ -75,7 +60,7 @@ def OptionsMeta(print_func=None):
 
                     opt_name = name if hasattr(opt, 'default') else '#{0}'.format(name)
                     opt_val = '{0}'.format(opt.default) if hasattr(opt, 'default') else '<{0}>'.format(name.upper())
-                    
+
                     f.write('{0} = {1}\n'.format(opt_name, opt_val))
 
                 f.write("\n")
@@ -83,10 +68,10 @@ def OptionsMeta(print_func=None):
             return f.getvalue()
         finally:
             f.close()
-        
+
     def _option_usage(option):
         '''Create an option usage line part based on option definition.
-        
+
             Returns a tuple of (short_str, long_str) to be added.
         '''
         s, l = None, None
@@ -103,8 +88,7 @@ def OptionsMeta(print_func=None):
                 s = wrap_optional(option, '--{0}=<{1}>'.format(option.cmd_name, option.cmd_name or option.name))
             else:
                 s = wrap_optional(option, '--{0}'.format(option.cmd_name))
-       
-        
+
         if option.cmd_name:
             if option.type != bool:
                 l = wrap_optional(option, '--{0}=<{1}>'.format(option.cmd_name, option.cmd_name or option.name))
@@ -130,7 +114,7 @@ def OptionsMeta(print_func=None):
         '''Returns usage/help string based on defined options.'''
 
         cmd_name = cmd_name or os.path.basename(sys.argv[0])
-        
+
         lines = ['Usage:', '',]
 
         # Group all options
@@ -173,7 +157,7 @@ def OptionsMeta(print_func=None):
                 lines.append('{0} {1}'.format(cmd_name, ' '.join(long_line)))
 
         return '\n'.join(lines)
- 
+
     def define_args(args=None):
         '''Defines required/optional arguments.
 
@@ -184,7 +168,7 @@ def OptionsMeta(print_func=None):
           - (arg1, arg2, arg3): Require three arguments, each with a different name.
         '''
 
-        if len(args) == 2 and type(args[0]) in set((int, _long)) and isinstance(args[1], _basestring):
+        if len(args) == 2 and type(args[0]) in set((int, int)) and isinstance(args[1], str):
             cmdarg_defs['count'] = args[0]
             cmdarg_defs['args'] = [args[1]] * abs(args[0])
             return
@@ -195,24 +179,24 @@ def OptionsMeta(print_func=None):
 
         raise OptionsError('Define either (count, argname) (use -1 for zero or more, -2 for one or more) or a list of argument names.')
 
-    def define_opt(section, name, cmd_name=None, cmd_short_name=None, cmd_only=False, type=_type(''), is_config_file=False, is_help=False, help=None, cmd_group='default', **kwargs):
+    def define_opt(section, name, cmd_name=None, cmd_short_name=None, cmd_only=False, type=str, is_config_file=False, is_help=False, help=None, cmd_group='default', **kwargs):
         '''Defines an option. Should be run before init_options().
-        
+
            Note that you may pass in one additional kwarg: default.
            If this argument is not specified, the option is required, and
            will have to be set from either a config file or the command line.
         '''
 
-        if not isinstance(section, _basestring):
+        if not isinstance(section, str):
             raise OptionsError('Section name {0} must be a string, not a {1}'.format(section, _type(section)))
 
-        if not isinstance(name, _basestring):
+        if not isinstance(name, str):
             raise OptionsError('Option name {0} must be a string, not a {1}'.format(name, _type(name)))
 
-        if cmd_name and not isinstance(cmd_name, _basestring):
+        if cmd_name and not isinstance(cmd_name, str):
             raise OptionsError('cmd_name {0} must be a string, not a {1}'.format(cmd_name, _type(cmd_name)))
 
-        if cmd_short_name and not isinstance(cmd_short_name, _basestring):
+        if cmd_short_name and not isinstance(cmd_short_name, str):
             raise OptionsError('cmd_short_name {0} must be a string, not a {1}'.format(cmd_short_name, _type(cmd_short_name)))
 
         section = section.lower().strip()
@@ -222,7 +206,7 @@ def OptionsMeta(print_func=None):
 
         if not re.match('^[a-z_]+[a-z0-9_]*$', section):
             raise OptionsError('{0} is not a valid section name. It must contain only letters, numbers and underscores.'.format(section))
-        
+
         if not re.match('^[a-z_]+[a-z0-9_]*$', name):
             raise OptionsError('{0} is not a valid name. It must contain only letters, numbers and underscores.'.format(name))
 
@@ -242,7 +226,7 @@ def OptionsMeta(print_func=None):
         if cmd_only and not (cmd_name or cmd_short_name):
             raise OptionsError('Option {0}.{1} is defined as cmd_only, but neither cmd_name nor cmd_short_name are set.'.format(section, name))
 
-        if is_config_file and not isinstance(type(), _basestring):
+        if is_config_file and not isinstance(type(), str):
             raise OptionsError('Option {0}.{1} is defined as is_config_file, but with {2} instead of {3}.'.format(section, name, type, _type('')))
 
         if is_config_file and config_file_def['section']:
@@ -274,18 +258,17 @@ def OptionsMeta(print_func=None):
             option_definitions[section][name].default = False
         else:
             option_definitions[section][name].required = True
-            
 
         if is_config_file:
             config_file_def['section'] = section
             config_file_def['optname'] = name
-            
+
             if 'default' in kwargs:
                 config_file_def['filename'] = kwargs['default']
 
     def parse_config(config_file=None):
         '''Parses a configuration file.
-        
+
         This function sets option values if not already set by the parse_args() function.'''
 
         if not config_file:
@@ -360,7 +343,7 @@ def OptionsMeta(print_func=None):
         # Empty a non-local scope list, in case parse_args is called twice
         if len(cmdargs) > 0:
             [cmdargs.pop() for _ in range(len(cmdargs))]
-        
+
         for arg in args:
             cmdargs.append(arg)
 
@@ -388,10 +371,10 @@ def OptionsMeta(print_func=None):
     def init_options(argv=None, config_file=None):
         """Shortcut method for initializing all the options.
 
-        Uses no configuration file unless a command line option has been defined 
+        Uses no configuration file unless a command line option has been defined
         as is_config_file=True.
         """
-        
+
         if argv is None:
             argv = sys.argv[1:]
 
@@ -403,6 +386,7 @@ def OptionsMeta(print_func=None):
             set_defaults()
             verify_all_options()
 
+            return options
         except OptionsUserError as e:
             print_func(e)
             print_func('')
@@ -473,5 +457,5 @@ options, cmdargs, define_opt, define_args, parse_config, parse_args, set_default
 
 __all__ = ('options', 'cmdargs', 'define_opt', 'define_args', 'parse_config', 'parse_args', 'set_defaults', 'init_options', 'verify_all_options', 'generate_sample_config', 'usage', 'OptionsError', 'OptionsUserError', 'OptionsMeta',)
 
-__version__ = '0.3.1'
+__version__ = '0.4.0'
 
